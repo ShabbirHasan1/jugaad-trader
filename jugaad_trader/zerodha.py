@@ -25,6 +25,23 @@ from jugaad_trader.util import CLI_NAME
 
 log = logging.getLogger(__name__)
 
+class ZerodhaTicker(KiteTicker):
+    ROOT_URI = "wss://ws.zerodha.com/"
+    def __init__(self, user_id, enc_token, debug=False, 
+                                            root=None, reconnect=True,
+                                            reconnect_max_tries=KiteTicker.RECONNECT_MAX_TRIES,
+                                            reconnect_max_delay=KiteTicker.RECONNECT_MAX_DELAY,
+                                            connect_timeout=KiteTicker.CONNECT_TIMEOUT):
+        super(ZerodhaTicker, self).__init__(api_key="", access_token="",
+                                            debug=debug, root=root,
+                                            reconnect=reconnect,
+                                            reconnect_max_tries=reconnect_max_tries,
+                                            reconnect_max_delay=reconnect_max_delay,
+                                            connect_timeout=connect_timeout)
+
+        uid = int(time.time())*1000
+        self.socket_url = "{root}?api_key=kitefront&user_id={user_id}&enctoken={enc_token}&uid={uid}&user-agent=kite3-web&version=2.4.0".format(root=self.ROOT_URI, user_id=user_id, enc_token=enc_token, uid=uid)
+
 
 base_url = "https://kite.zerodha.com"
 login_url = "https://kite.zerodha.com/api/login"
@@ -67,6 +84,7 @@ class Zerodha(KiteConnect):
         except FileNotFoundError:
             raise FileNotFoundError("\n\nCould not find the session, Please start a session using \n\n$ jtrader zerodha startsession")
         self.enc_token = self.reqsession.cookies['enctoken']
+        self.user_id = self.reqsession.cookies['user_id']
 
     def load_creds(self, path=None):
         if path==None:
@@ -207,24 +225,9 @@ class Zerodha(KiteConnect):
     def close(self):
         self.reqsession.close()
    
-class ZerodhaTicker(KiteTicker):
-    ROOT_URI = "wss://ws.zerodha.com"
-    def __init__(self, api_key, access_token, public_token, user_id, debug=False, root=None,
-                reconnect=True, reconnect_max_tries=50, reconnect_max_delay=60,
-                connect_timeout=30):
-        super(ZerodhaTicker, self).__init__(api_key, access_token, debug=False, root=None,
-                                reconnect=True, reconnect_max_tries=50, reconnect_max_delay=60,
-                                connect_timeout=30)
-        uid = int(time.time())*1000
-        self.socket_url = "{root}?api_key=kitefront"\
-                            "&public_token={public_token}&user_id={user_id}&uid={uid}&user-agent=kite3-web&version=2.4.0".format(
-                                                    root=self.root,
-                                                    api_key=api_key,
-                                                    public_token=public_token,
-                                                    user_id=user_id,
-                                                    uid=uid)
-
-         
+    
+    def ticker(self):
+        return ZerodhaTicker(self.user_id, self.enc_token)
                             
 if __name__=="__main__":
     pass
